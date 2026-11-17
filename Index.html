@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>DSV Client Assignment Portal</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+:root{
+    --dsv-blue:#002664;
+    --dsv-blue-light:#0A34A1;
+    --dsv-orange:#C64801;
+    --bg:#F5F7FA;
+}
+
+body{
+    background:var(--bg);
+    font-family: Arial, sans-serif;
+}
+
+.navbar{
+    background:var(--dsv-blue);
+}
+
+.brand-title{
+    color:white;
+    font-weight:bold;
+    font-size:1.4rem;
+}
+
+.kpi-card{
+    border:none;
+    border-radius:15px;
+    box-shadow:0 2px 12px rgba(0,0,0,.08);
+    transition:.2s;
+}
+
+.kpi-card:hover{
+    transform:translateY(-3px);
+}
+
+.kpi-number{
+    font-size:2rem;
+    font-weight:700;
+    color:var(--dsv-blue);
+}
+
+.filter-btn{
+    border:none;
+    background:var(--dsv-blue);
+    color:white;
+    border-radius:10px;
+    padding:10px 20px;
+}
+
+.filter-btn.active{
+    background:var(--dsv-orange);
+}
+
+.person-card{
+    cursor:pointer;
+    border-left:5px solid var(--dsv-blue);
+    transition:.2s;
+}
+
+.person-card:hover{
+    transform:translateX(4px);
+    background:#F7F9FC;
+}
+
+.table-container{
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+.search-box{
+    border-radius:12px;
+    padding:15px;
+}
+
+.badge-role{
+    background:var(--dsv-blue);
+}
+
+.clear-filter{
+    display:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<nav class="navbar mb-4">
+<div class="container-fluid">
+<span class="brand-title">
+DSV Client Assignment Portal
+</span>
+</div>
+</nav>
+
+<div class="container">
+
+<div class="row g-3 mb-4">
+
+<div class="col-md-3">
+<div class="card kpi-card">
+<div class="card-body text-center">
+<div class="kpi-number" id="totalClients">0</div>
+<div>Clientes</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card kpi-card">
+<div class="card-body text-center">
+<div class="kpi-number" id="totalManagers">0</div>
+<div>Gestores</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card kpi-card">
+<div class="card-body text-center">
+<div class="kpi-number" id="totalSupervisors">0</div>
+<div>Supervisores</div>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card kpi-card">
+<div class="card-body text-center">
+<div class="kpi-number" id="totalRegional">0</div>
+<div>Gerentes</div>
+</div>
+</div>
+</div>
+
+</div>
+
+<div class="card p-3 mb-4">
+
+<input
+id="searchInput"
+class="form-control search-box"
+placeholder="🔍 Pesquisar por código ou nome do cliente..."
+>
+
+</div>
+
+<div class="mb-3 d-flex gap-2 flex-wrap">
+
+<button class="filter-btn active" onclick="showHierarchy('gestor')">
+Gestores
+</button>
+
+<button class="filter-btn" onclick="showHierarchy('supervisor')">
+Supervisores
+</button>
+
+<button class="filter-btn" onclick="showHierarchy('gerente')">
+Gerentes
+</button>
+
+<button
+class="btn btn-outline-danger clear-filter"
+id="clearFilter"
+onclick="clearFilters()">
+Remover filtro
+</button>
+
+</div>
+
+<div class="row mb-4" id="hierarchyCards"></div>
+
+<div class="table-container">
+
+<div class="table-responsive">
+
+<table class="table table-hover align-middle">
+
+<thead>
+<tr>
+<th>Código</th>
+<th>Cliente</th>
+<th>Gestor</th>
+<th>Supervisor</th>
+<th>Gerente Regional</th>
+</tr>
+</thead>
+
+<tbody id="tableBody"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="clientes.js"></script>
+
+<script>
+
+const rawData = CLIENT_LEADER_DB.map(row => ({
+    codigo: row[0],
+    cliente: row[1],
+    gestor: row[2],
+    supervisor: row[3],
+    gerente: row[4]
+}));
+
+let currentMode = "gestor";
+let currentFilter = "";
+let filteredData = [...rawData];
+
+function uniqueCount(field){
+
+    return new Set(
+        rawData
+            .map(x => x[field])
+            .filter(x => x && x.trim() !== "")
+    ).size;
+}
+
+document.getElementById("totalClients").innerText = rawData.length;
+document.getElementById("totalManagers").innerText = uniqueCount("gestor");
+document.getElementById("totalSupervisors").innerText = uniqueCount("supervisor");
+document.getElementById("totalRegional").innerText = uniqueCount("gerente");
+
+function renderTable(data){
+
+    const tbody = document.getElementById('tableBody');
+
+    tbody.innerHTML = data.map(item => `
+
+<tr>
+<td>${item.codigo}</td>
+<td>${item.cliente}</td>
+<td>${item.gestor}</td>
+<td>${item.supervisor}</td>
+<td>${item.gerente}</td>
+</tr>
+
+`).join('');
+}
+
+function buildCards(field){
+
+    const counts = {};
+
+    filteredData.forEach(item => {
+
+        const value = item[field];
+
+        if(!value || value.trim()==="") return;
+
+        counts[value] = (counts[value] || 0) + 1;
+    });
+
+    const cards = Object.entries(counts)
+        .sort((a,b)=>b[1]-a[1]);
+
+    document.getElementById("hierarchyCards").innerHTML =
+    cards.map(c=>`
+
+<div class="col-md-3">
+
+<div class="card person-card h-100"
+     onclick="applyHierarchyFilter('${field}','${c[0]}')">
+
+<div class="card-body">
+
+<h6>${c[0]}</h6>
+
+<span class="badge badge-role">
+${c[1]} clientes
+</span>
+
+</div>
+
+</div>
+
+</div>
+
+`).join('');
+}
+
+function applyHierarchyFilter(field,value){
+
+    currentFilter = value;
+
+    document.getElementById("clearFilter").style.display="inline-block";
+
+    renderTable(
+        filteredData.filter(
+            x => x[field] === value
+        )
+    );
+}
+
+function clearFilters(){
+
+    currentFilter = "";
+
+    document.getElementById("clearFilter").style.display="none";
+
+    renderTable(filteredData);
+}
+
+function showHierarchy(tipo){
+
+    currentMode = tipo;
+
+    document
+        .querySelectorAll('.filter-btn')
+        .forEach(x=>x.classList.remove('active'));
+
+    event.target.classList.add('active');
+
+    if(tipo==="gestor")
+        buildCards("gestor");
+
+    if(tipo==="supervisor")
+        buildCards("supervisor");
+
+    if(tipo==="gerente")
+        buildCards("gerente");
+}
+
+document
+.getElementById("searchInput")
+.addEventListener("input", function(){
+
+    const value = this.value.toLowerCase();
+
+    filteredData = rawData.filter(x =>
+
+        (x.codigo || "")
+            .toLowerCase()
+            .includes(value)
+
+        ||
+
+        (x.cliente || "")
+            .toLowerCase()
+            .includes(value)
+
+    );
+
+    renderTable(filteredData);
+
+    if(currentMode==="gestor")
+        buildCards("gestor");
+
+    if(currentMode==="supervisor")
+        buildCards("supervisor");
+
+    if(currentMode==="gerente")
+        buildCards("gerente");
+});
+
+renderTable(rawData);
+buildCards("gestor");
+
+</script>
+
+</body>
+</html>
