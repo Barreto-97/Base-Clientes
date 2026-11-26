@@ -195,6 +195,7 @@ Remover filtro
 <th>Gestor</th>
 <th>Supervisor</th>
 <th>Gerente Regional</th>
+<th>Vertical</th>
 </tr>
 </thead>
 
@@ -218,6 +219,7 @@ const rawData = CLIENT_LEADER_DB.map(row => ({
     gestor: row[2],
     supervisor: row[3],
     gerente: row[4]
+    vertical: row[5]
 }));
 
 let currentMode = "gestor";
@@ -250,6 +252,7 @@ function renderTable(data){
 <td>${item.gestor}</td>
 <td>${item.supervisor}</td>
 <td>${item.gerente}</td>
+<td>${item.vertical}</td>
 </tr>
 
 `).join('');
